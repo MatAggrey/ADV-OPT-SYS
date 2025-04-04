@@ -1,0 +1,31 @@
+import pika
+import sys
+
+# Topic to subscribe to from command-line argument (e.g., "news.#")
+binding_key = sys.argv[1] if len(sys.argv) > 1 else "#"
+
+# Connection to RabbitMQ (change IP to your broker if needed)
+connection = pika.BlockingConnection(
+    pika.ConnectionParameters('192.168.1.244')  # Use 'localhost' if on same VM
+)
+channel = connection.channel()
+
+# Declare exchange
+channel.exchange_declare(exchange='topic_logs', exchange_type='topic')
+
+# Create a new, exclusive queue for this subscriber
+result = channel.queue_declare(queue='', exclusive=True)
+queue_name = result.method.queue
+
+# Bind queue to the exchange using the topic key
+channel.queue_bind(exchange='topic_logs', queue=queue_name, routing_key=binding_key)
+
+print(f" [*] Waiting for messages with topic '{binding_key}'. To exit press CTRL+C")
+
+# Callback to process received messages
+def callback(ch, method, properties, body):
+    print(f" [x] Received message with topic '{method.routing_key}': {body.decode()}")
+
+channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
+
+channel.start_consuming()

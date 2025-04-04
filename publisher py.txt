@@ -1,0 +1,27 @@
+import pika
+
+# Connect to RabbitMQ (change IP if on different machine)
+connection = pika.BlockingConnection(
+    pika.ConnectionParameters('192.168.1.244')  # Use 'localhost' if RabbitMQ is on same VM
+)
+channel = connection.channel()
+
+# Declare topic exchange
+channel.exchange_declare(exchange='topic_logs', exchange_type='topic')
+
+# Messages and topics to publish
+messages = {
+    "sports.football": "Football match today!",
+    "sports.basketball": "NBA finals start!",
+    "weather.sunny": "It's a bright sunny day!",
+    "weather.rain": "Heavy rain expected!",
+    "news.politics": "Election results announced!",
+    "news.finance": "Stock market sees a big change!",
+}
+
+# Publish each message with its topic
+for topic, message in messages.items():
+    channel.basic_publish(exchange='topic_logs', routing_key=topic, body=message)
+    print(f" [x] Sent '{message}' with topic '{topic}'")
+
+connection.close()
